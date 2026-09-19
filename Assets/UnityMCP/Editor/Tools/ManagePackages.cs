@@ -19,11 +19,11 @@ namespace MCPForUnity.Editor.Tools
     public static class ManagePackages
     {
         // Pending async requests keyed by job ID
-        private static readonly Dictionary<string, Request> PendingRequests = new();
+        private static readonly Dictionary<string, Request> PendingRequests = new Dictionary<string, Request>();
 
         // Pending list/search requests keyed by job ID
-        private static readonly Dictionary<string, ListRequest> PendingListRequests = new();
-        private static readonly Dictionary<string, SearchRequest> PendingSearchRequests = new();
+        private static readonly Dictionary<string, ListRequest> PendingListRequests = new Dictionary<string, ListRequest>();
+        private static readonly Dictionary<string, SearchRequest> PendingSearchRequests = new Dictionary<string, SearchRequest>();
 
         public static object HandleCommand(JObject @params)
         {
@@ -212,13 +212,22 @@ namespace MCPForUnity.Editor.Tools
             }
 
             var serialized = PackageJobManager.ToSerializable(job);
-            string message = job.Status switch
+            string message;
+            switch (job.Status)
             {
-                PackageJobStatus.Running => $"Job {job.JobId} is still running ({job.Operation} '{job.Package}').",
-                PackageJobStatus.Succeeded => $"Job {job.JobId} succeeded ({job.Operation} '{job.Package}').",
-                PackageJobStatus.Failed => $"Job {job.JobId} failed ({job.Operation} '{job.Package}'): {job.Error}",
-                _ => $"Job {job.JobId}: {job.Status}"
-            };
+                case PackageJobStatus.Running:
+                    message = $"Job {job.JobId} is still running ({job.Operation} '{job.Package}').";
+                    break;
+                case PackageJobStatus.Succeeded:
+                    message = $"Job {job.JobId} succeeded ({job.Operation} '{job.Package}').";
+                    break;
+                case PackageJobStatus.Failed:
+                    message = $"Job {job.JobId} failed ({job.Operation} '{job.Package}'): {job.Error}";
+                    break;
+                default:
+                    message = $"Job {job.JobId}: {job.Status}";
+                    break;
+            }
 
             if (job.Status == PackageJobStatus.Running)
             {
@@ -360,7 +369,7 @@ namespace MCPForUnity.Editor.Tools
 
             try
             {
-                var allPackages = PackageInfo.GetAllRegisteredPackages();
+                var allPackages = GetAllRegisteredPackagesCompat();
                 var info = allPackages.FirstOrDefault(pkg =>
                     string.Equals(pkg.name, package, StringComparison.OrdinalIgnoreCase));
 
@@ -471,7 +480,11 @@ namespace MCPForUnity.Editor.Tools
                 registries.Add(newRegistry);
 
                 File.WriteAllText(manifestPath, manifest.ToString(Formatting.Indented));
+#if UNITY_2021_1_OR_NEWER
                 Client.Resolve();
+#else
+                AssetDatabase.Refresh();
+#endif
 
                 return new SuccessResponse(
                     $"Added scoped registry '{nameResult.Value}'.",
@@ -537,7 +550,11 @@ namespace MCPForUnity.Editor.Tools
                     manifest.Remove("scopedRegistries");
 
                 File.WriteAllText(manifestPath, manifest.ToString(Formatting.Indented));
+#if UNITY_2021_1_OR_NEWER
                 Client.Resolve();
+#else
+                AssetDatabase.Refresh();
+#endif
 
                 return new SuccessResponse($"Removed scoped registry '{removedName}'.");
             }
@@ -579,7 +596,11 @@ namespace MCPForUnity.Editor.Tools
         {
             try
             {
+#if UNITY_2021_1_OR_NEWER
                 Client.Resolve();
+#else
+                AssetDatabase.Refresh();
+#endif
                 return new SuccessResponse("Package resolution triggered. Unity will re-resolve all packages.");
             }
             catch (Exception e)
@@ -593,7 +614,7 @@ namespace MCPForUnity.Editor.Tools
         {
             try
             {
-                var allPackages = PackageInfo.GetAllRegisteredPackages();
+                var allPackages = GetAllRegisteredPackagesCompat();
                 return new SuccessResponse(
                     "Package manager is available.",
                     new
@@ -721,7 +742,7 @@ namespace MCPForUnity.Editor.Tools
             {
                 string name = PackageJobManager.ExtractPackageName(packageName);
 
-                var allPackages = PackageInfo.GetAllRegisteredPackages();
+                var allPackages = GetAllRegisteredPackagesCompat();
                 return allPackages
                     .Where(pkg => pkg.dependencies.Any(d =>
                         string.Equals(d.name, name, StringComparison.OrdinalIgnoreCase)))
@@ -732,6 +753,33 @@ namespace MCPForUnity.Editor.Tools
             {
                 return null;
             }
+        }
+
+
+        private static UnityEditor.PackageManager.PackageInfo[] GetAllRegisteredPackagesCompat()
+        {
+#if UNITY_2021_1_OR_NEWER
+            return UnityEditor.PackageManager.PackageInfo.GetAllRegisteredPackages();
+#else
+            var list = new System.Collections.Generic.List<UnityEditor.PackageManager.PackageInfo>();
+            if (System.IO.Directory.Exists("Packages"))
+            {
+                foreach (var dir in System.IO.Directory.GetDirectories("Packages"))
+                {
+                    var p = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(dir.Replace('\\', '/'));
+                    if (p != null) list.Add(p);
+                }
+            }
+            if (System.IO.Directory.Exists("Library/PackageCache"))
+            {
+                foreach (var dir in System.IO.Directory.GetDirectories("Library/PackageCache"))
+                {
+                    var p = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(dir.Replace('\\', '/'));
+                    if (p != null) list.Add(p);
+                }
+            }
+            return list.ToArray();
+#endif
         }
     }
 }

@@ -31,8 +31,8 @@ namespace MCPForUnity.Editor.Services
         private const int MaxJobsToKeep = 10;
         private const long DomainReloadTimeoutMs = 120_000;
 
-        private static readonly object LockObj = new();
-        private static readonly Dictionary<string, PackageJob> Jobs = new();
+        private static readonly object LockObj =new object();
+        private static readonly Dictionary<string, PackageJob> Jobs = new Dictionary<string, PackageJob>();
 
         static PackageJobManager()
         {
@@ -63,12 +63,15 @@ namespace MCPForUnity.Editor.Services
             if (string.IsNullOrWhiteSpace(status))
                 return PackageJobStatus.Running;
 
-            return status.Trim().ToLowerInvariant() switch
+            switch (status.Trim().ToLowerInvariant())
             {
-                "succeeded" => PackageJobStatus.Succeeded,
-                "failed" => PackageJobStatus.Failed,
-                _ => PackageJobStatus.Running
-            };
+                case "succeeded":
+                    return PackageJobStatus.Succeeded;
+                case "failed":
+                    return PackageJobStatus.Failed;
+                default:
+                    return PackageJobStatus.Running;
+            }
         }
 
         private static void TryRestoreFromSessionState()
@@ -128,7 +131,11 @@ namespace MCPForUnity.Editor.Services
             try
             {
                 string packageName = ExtractPackageName(job.Package);
+#if UNITY_2021_1_OR_NEWER
                 var allPackages = PackageInfo.GetAllRegisteredPackages();
+#else
+                PackageInfo[] allPackages = GetAllRegisteredPackagesCompat();
+#endif
                 var info = FindPackageInfo(allPackages, packageName, job.Package);
 
                 if (job.Operation == "add" || job.Operation == "embed")
@@ -175,6 +182,61 @@ namespace MCPForUnity.Editor.Services
                 McpLog.Warn($"[PackageJobManager] Recovery check failed for job {job.JobId}: {ex.Message}");
             }
         }
+
+        private static PackageInfo[] GetAllRegisteredPackagesCompat()
+        {
+#if UNITY_2021_1_OR_NEWER
+    return PackageInfo.GetAllRegisteredPackages();
+#else
+            var list = new List<PackageInfo>();
+            string lockFilePath = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Library/PackageManager/projectLock.json");
+            lockFilePath = System.IO.Path.GetFullPath(lockFilePath);
+
+            if (System.IO.File.Exists(lockFilePath))
+            {
+                try
+                {
+                    string jsonText = System.IO.File.ReadAllText(lockFilePath);
+					Newtonsoft.Json.Linq.JObject lockJson = Newtonsoft.Json.Linq.JObject.Parse(jsonText);
+                    var dependencies = lockJson["dependencies"] as Newtonsoft.Json.Linq.JObject;
+                    if (dependencies != null)
+                    {
+                        foreach (var prop in dependencies.Properties())
+                        {
+                            var pkgData = prop.Value as Newtonsoft.Json.Linq.JObject;
+                            if (pkgData == null) continue;
+                            string resolvedPath = pkgData["resolved"]?.ToString() ?? "";
+                            if (string.IsNullOrEmpty(resolvedPath)) continue;
+                            string assetPath = resolvedPath.Replace('\\', '/');
+                            var pkgInfo = PackageInfo.FindForAssetPath(assetPath);
+                            if (pkgInfo != null)
+                            {
+                                list.Add(pkgInfo);
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // lock.json读取失败，进入兜底
+                }
+            }
+
+            //兜底扫描Packages目录本地包
+            if (System.IO.Directory.Exists("Packages"))
+            {
+                foreach (var dir in System.IO.Directory.GetDirectories("Packages"))
+                {
+                    var p = PackageInfo.FindForAssetPath(dir.Replace('\\', '/'));
+                    if (p != null) list.Add(p);
+                }
+            }
+
+            //去重
+            return list.GroupBy(p => p.name).Select(g => g.First()).ToArray();
+#endif
+        }
+
 
         /// <summary>
         /// Find a PackageInfo by name, falling back to packageId or git/local source for non-standard identifiers.

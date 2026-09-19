@@ -9,6 +9,35 @@ using UnityEditor; // Required for AssetDatabase and EditorUtility
 
 namespace MCPForUnity.Runtime.Serialization
 {
+    public abstract class JsonConverter<T> : JsonConverter
+    {
+        public new virtual bool CanRead => true;
+        public new virtual bool CanWrite => true;
+
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            if (value == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+            WriteJson(writer, (T)value, serializer);
+        }
+
+        public abstract void WriteJson(JsonWriter writer, T value, JsonSerializer serializer);
+
+        public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+        {
+            return ReadJson(reader, objectType, existingValue is T val ? val : default(T), existingValue != null, serializer);
+        }
+
+        public abstract T ReadJson(JsonReader reader, Type objectType, T existingValue, bool hasExistingValue, JsonSerializer serializer);
+
+        public override bool CanConvert(Type objectType)
+        {
+            return typeof(T).IsAssignableFrom(objectType);
+        }
+    }
     public class Vector3Converter : JsonConverter<Vector3>
     {
         public override void WriteJson(JsonWriter writer, Vector3 value, JsonSerializer serializer)
@@ -28,7 +57,7 @@ namespace MCPForUnity.Runtime.Serialization
             JToken token = JToken.Load(reader);
             if (token is JArray arr && arr.Count >= 3)
                 return new Vector3((float)arr[0], (float)arr[1], (float)arr[2]);
-            if (token is not JObject jo)
+            if (!(token is JObject jo))
                 throw new JsonSerializationException($"Cannot deserialize Vector3 from {token.Type}: '{token}'");
             return new Vector3(
                 (float)jo["x"],
@@ -55,7 +84,7 @@ namespace MCPForUnity.Runtime.Serialization
             JToken token = JToken.Load(reader);
             if (token is JArray arr && arr.Count >= 2)
                 return new Vector2((float)arr[0], (float)arr[1]);
-            if (token is not JObject jo)
+            if (!(token is JObject jo))
                 throw new JsonSerializationException($"Cannot deserialize Vector2 from {token.Type}: '{token}'");
             return new Vector2(
                 (float)jo["x"],
@@ -85,7 +114,7 @@ namespace MCPForUnity.Runtime.Serialization
             JToken token = JToken.Load(reader);
             if (token is JArray arr && arr.Count >= 4)
                 return new Quaternion((float)arr[0], (float)arr[1], (float)arr[2], (float)arr[3]);
-            if (token is not JObject jo)
+            if (!(token is JObject jo))
                 throw new JsonSerializationException($"Cannot deserialize Quaternion from {token.Type}: '{token}'");
             return new Quaternion(
                 (float)jo["x"],
@@ -194,7 +223,7 @@ namespace MCPForUnity.Runtime.Serialization
             JToken token = JToken.Load(reader);
             if (token is JArray arr && arr.Count >= 4)
                 return new Vector4((float)arr[0], (float)arr[1], (float)arr[2], (float)arr[3]);
-            if (token is not JObject jo)
+            if (!(token is JObject jo))
                 throw new JsonSerializationException($"Cannot deserialize Vector4 from {token.Type}: '{token}'");
             return new Vector4(
                 (float)jo["x"],

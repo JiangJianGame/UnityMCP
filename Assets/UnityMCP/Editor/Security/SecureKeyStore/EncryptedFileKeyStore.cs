@@ -92,7 +92,7 @@ namespace MCPForUnity.Editor.Security
             byte[] master = LoadOrCreate(Path.Combine(_dir, "secret.bin"), 32);
             byte[] salt = LoadOrCreate(Path.Combine(_dir, "salt.bin"), 16);
             string password = Convert.ToBase64String(master) + "|" + MachineId();
-            using (var kdf = new Rfc2898DeriveBytes(password, salt, Iterations, HashAlgorithmName.SHA256))
+            using (var kdf = new Rfc2898DeriveBytes(password, salt, Iterations))
             {
                 byte[] material = kdf.GetBytes(64);
                 encKey = new byte[32];
@@ -203,15 +203,14 @@ namespace MCPForUnity.Editor.Security
             try
             {
                 if (Application.platform == RuntimePlatform.WindowsEditor) return;
-                var psi = new System.Diagnostics.ProcessStartInfo("/bin/chmod")
+                var psi = new System.Diagnostics.ProcessStartInfo("/bin/chmod", $"{mode} \"{path}\"")
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,
-                };
-                psi.ArgumentList.Add(mode);
-                psi.ArgumentList.Add(path);
+            };
+
                 using (var p = System.Diagnostics.Process.Start(psi)) p?.WaitForExit(2000);
             }
             catch { /* hardening is best-effort */ }

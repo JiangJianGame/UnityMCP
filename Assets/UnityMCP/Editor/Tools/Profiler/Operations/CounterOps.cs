@@ -1,3 +1,4 @@
+#if UNITY_2020_2_OR_NEWER
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -48,25 +49,29 @@ namespace MCPForUnity.Editor.Tools.Profiler
                 await WaitOneFrameAsync();
 
                 // Read values — use GetSample(0) for last completed frame data;
-                // CurrentValue is always 0 for per-frame render counters.
-                for (int i = 0; i < recorders.Count; i++)
+                // fall back to CurrentValue if no samples yet
+                for (int i = 0; i < counterNames.Count; i++)
                 {
                     var recorder = recorders[i];
-                    string name = counterNames[i];
-                    long value = 0;
-                    if (recorder.Valid && recorder.Count > 0)
-                        value = recorder.GetSample(0).Value;
-                    else if (recorder.Valid)
-                        value = recorder.CurrentValue;
-                    data[name] = value;
-                    data[name + "_valid"] = recorder.Valid;
-                    data[name + "_unit"] = recorder.Valid ? recorder.UnitType.ToString() : "Unknown";
+                    if (recorder.Valid)
+                    {
+                        long val = recorder.SampleCount > 0
+                            ? recorder.GetSample(0).Value
+                            : recorder.CurrentValue;
+                        data[counterNames[i]] = val;
+                    }
+                    else
+                    {
+                        data[counterNames[i]] = null;
+                    }
                 }
             }
             finally
             {
-                foreach (var recorder in recorders)
-                    recorder.Dispose();
+                foreach (var r in recorders)
+                {
+                    r.Dispose();
+                }
             }
 
             return new SuccessResponse($"Captured {counterNames.Count} counter(s) from '{categoryName}'.", new
@@ -153,3 +158,20 @@ namespace MCPForUnity.Editor.Tools.Profiler
         }
     }
 }
+#else
+using System.Threading.Tasks;
+using MCPForUnity.Editor.Helpers;
+using Newtonsoft.Json.Linq;
+
+namespace MCPForUnity.Editor.Tools.Profiler
+{
+    internal static class CounterOps
+    {
+        internal static Task<object> GetCountersAsync(JObject @params)
+        {
+            return Task.FromResult<object>(new ErrorResponse(
+                "ProfilerRecorder counters require Unity 2020.2 or newer. This feature is not available in Unity 2019.4."));
+        }
+    }
+}
+#endif

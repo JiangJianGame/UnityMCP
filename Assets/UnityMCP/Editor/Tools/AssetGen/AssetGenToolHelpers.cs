@@ -45,10 +45,14 @@ namespace MCPForUnity.Editor.Tools.AssetGen
         public static object Cancel(ToolParams p)
         {
             string jobId = p.Get("job_id");
-            if (string.IsNullOrEmpty(jobId)) return new ErrorResponse("'job_id' is required for cancel.");
-            return AssetGenJobManager.Cancel(jobId)
-                ? new SuccessResponse($"Cancel requested for job '{jobId}'.")
-                : new ErrorResponse($"No cancelable job found with ID '{jobId}'.");
+            if (string.IsNullOrEmpty(jobId))
+                return new ErrorResponse("'job_id' is required for cancel.");
+
+            bool cancelled = AssetGenJobManager.Cancel(jobId);
+            if (cancelled)
+                return new SuccessResponse($"Cancel requested for job '{jobId}'.");
+            else
+                return new ErrorResponse($"No cancelable job found with ID '{jobId}'.");
         }
 
         /// <summary>List the configured providers for a given kind (audio / image / model).</summary>

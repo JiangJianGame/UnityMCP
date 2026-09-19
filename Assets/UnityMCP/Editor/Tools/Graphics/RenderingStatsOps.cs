@@ -5,8 +5,10 @@ using MCPForUnity.Editor.Helpers;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
+#if UNITY_2020_2_OR_NEWER
 using Unity.Profiling;
 using Unity.Profiling.LowLevel.Unsafe;
+#endif
 using UnityEngine.Profiling;
 using UProfiler = UnityEngine.Profiling.Profiler;
 
@@ -39,6 +41,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
         // === stats_get ===
         internal static object GetStats(JObject @params)
         {
+#if UNITY_2020_2_OR_NEWER
             var stats = new Dictionary<string, object>();
 
             foreach (var (counterName, jsonKey) in COUNTER_MAP)
@@ -53,11 +56,30 @@ namespace MCPForUnity.Editor.Tools.Graphics
                 message = "Rendering stats captured.",
                 data = stats
             };
+#else
+            var stats = new Dictionary<string, object>
+            {
+                ["draw_calls"] = UnityStats.drawCalls,
+                ["batches"] = UnityStats.batches,
+                ["set_pass_calls"] = UnityStats.setPassCalls,
+                ["triangles"] = UnityStats.triangles,
+                ["vertices"] = UnityStats.vertices,
+                ["shadow_casters"] = UnityStats.shadowCasters
+            };
+
+            return new
+            {
+                success = true,
+                message = "Rendering stats captured (UnityStats fallback for Unity 2019.4).",
+                data = stats
+            };
+#endif
         }
 
         // === stats_list_counters ===
         internal static object ListCounters(JObject @params)
         {
+#if UNITY_2020_2_OR_NEWER
             var p = new ToolParams(@params);
             string categoryName = p.Get("category");
 
@@ -87,6 +109,14 @@ namespace MCPForUnity.Editor.Tools.Graphics
                 message = $"Found {counters.Count} counters in category '{category.Name}'.",
                 data = new { counters }
             };
+#else
+            return new
+            {
+                success = true,
+                message = "ProfilerRecorder counters require Unity 2020.2 or newer. Use stats_get or stats_get_memory in Unity 2019.4.",
+                data = new { counters = new List<object>() }
+            };
+#endif
         }
 
         // === stats_set_scene_debug_mode ===
@@ -143,6 +173,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             };
         }
 
+#if UNITY_2020_2_OR_NEWER
         // --- Helper: Try to resolve a ProfilerCategory by name ---
         private static ProfilerCategory TryResolveCategory(string name)
         {
@@ -167,5 +198,6 @@ namespace MCPForUnity.Editor.Tools.Graphics
                 default: return ProfilerCategory.Render;
             }
         }
+#endif
     }
 }

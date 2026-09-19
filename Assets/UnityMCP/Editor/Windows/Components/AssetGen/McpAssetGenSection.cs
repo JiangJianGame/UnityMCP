@@ -47,7 +47,7 @@ namespace MCPForUnity.Editor.Windows.Components.AssetGen
 
         // Per-provider enable toggles for the GLB-capable (model) providers, used to
         // recompute the glTFast notice when a toggle changes.
-        private readonly List<(string Id, Toggle Toggle)> modelEnableToggles = new();
+        private readonly List<(string Id, Toggle Toggle)> modelEnableToggles =new List<(string Id, Toggle Toggle)>();
 
         public VisualElement Root { get; private set; }
 
@@ -417,7 +417,7 @@ namespace MCPForUnity.Editor.Windows.Components.AssetGen
             modelLabel.AddToClassList("setting-label");
             dropdownRow.Add(modelLabel);
 
-            var dropdown = new DropdownField(choices, 0);
+            var dropdown = new DropdownField("", choices, 0);
             dropdown.AddToClassList("setting-dropdown-inline");
             dropdown.tooltip = "The model generate_* uses for this provider when no explicit model is passed.";
             dropdown.SetValueWithoutNotify(selected.Label);

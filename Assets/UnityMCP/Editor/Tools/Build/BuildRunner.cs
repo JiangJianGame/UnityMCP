@@ -66,6 +66,7 @@ namespace MCPForUnity.Editor.Tools.Build
             // a specific texture format — confirmed Unity bug IN-102413 where value 0
             // on Unity 6000+ triggers PVRTC, ignoring Player Settings.
             // Leave at platform default (0) so Unity respects Player Settings.
+#if UNITY_2021_2_OR_NEWER
             if (target == BuildTarget.StandaloneWindows
                 || target == BuildTarget.StandaloneWindows64
                 || target == BuildTarget.StandaloneOSX
@@ -73,6 +74,7 @@ namespace MCPForUnity.Editor.Tools.Build
             {
                 options.subtarget = subtarget;
             }
+#endif
 
             return options;
         }
@@ -89,12 +91,16 @@ namespace MCPForUnity.Editor.Tools.Build
             {
                 switch (name.ToLowerInvariant())
                 {
+#if UNITY_2020_1_OR_NEWER
                     case "clean_build": opts |= BuildOptions.CleanBuildCache; break;
+#endif
                     case "auto_run": opts |= BuildOptions.AutoRunPlayer; break;
                     case "deep_profiling": opts |= BuildOptions.EnableDeepProfilingSupport; break;
                     case "compress_lz4": opts |= BuildOptions.CompressWithLz4; break;
                     case "strict_mode": opts |= BuildOptions.StrictMode; break;
+#if UNITY_2020_2_OR_NEWER
                     case "detailed_report": opts |= BuildOptions.DetailedBuildReport; break;
+#endif
                     case "allow_debugging": opts |= BuildOptions.AllowDebugging; break;
                     case "connect_profiler": opts |= BuildOptions.ConnectWithProfiler; break;
                     case "scripts_only": opts |= BuildOptions.BuildScriptsOnly; break;

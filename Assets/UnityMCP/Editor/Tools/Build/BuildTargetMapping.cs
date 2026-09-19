@@ -154,12 +154,16 @@ namespace MCPForUnity.Editor.Tools.Build
 
         public static int ResolveSubtarget(string subtarget)
         {
+#if UNITY_2021_2_OR_NEWER
             if (string.IsNullOrEmpty(subtarget))
                 return (int)StandaloneBuildSubtarget.Player;
             string lower = subtarget.ToLowerInvariant();
             if (lower == "server")
                 return (int)StandaloneBuildSubtarget.Server;
             return (int)StandaloneBuildSubtarget.Player;
+#else
+            return 0;
+#endif
         }
     }
 }

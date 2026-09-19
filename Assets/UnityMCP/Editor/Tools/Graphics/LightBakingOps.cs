@@ -133,6 +133,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
         // === bake_get_settings ===
         internal static object GetSettings(JObject @params)
         {
+#if UNITY_2020_1_OR_NEWER
             var settings = EnsureLightingSettings();
             if (settings == null)
                 return new ErrorResponse(
@@ -165,6 +166,26 @@ namespace MCPForUnity.Editor.Tools.Graphics
                 message = $"Lighting settings: {settings.lightmapper}, resolution {settings.lightmapResolution}.",
                 data
             };
+#else
+            var data = new Dictionary<string, object>
+            {
+                ["bakedGI"] = Lightmapping.bakedGI,
+                ["realtimeGI"] = Lightmapping.realtimeGI,
+                ["lightmapResolution"] = LightmapEditorSettings.bakeResolution,
+                ["lightmapMaxSize"] = LightmapEditorSettings.maxAtlasSize,
+                ["directSampleCount"] = LightmapEditorSettings.directSampleCount,
+                ["indirectSampleCount"] = LightmapEditorSettings.indirectSampleCount,
+                ["ao"] = LightmapEditorSettings.enableAmbientOcclusion,
+                ["aoMaxDistance"] = LightmapEditorSettings.aoMaxDistance
+            };
+
+            return new
+            {
+                success = true,
+                message = $"Lighting settings (Unity 2019): resolution {LightmapEditorSettings.bakeResolution}.",
+                data
+            };
+#endif
         }
 
         // === bake_set_settings ===
@@ -176,6 +197,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             if (settingsToken == null || !settingsToken.HasValues)
                 return new ErrorResponse("'settings' parameter is required (dict of property name to value).");
 
+#if UNITY_2020_1_OR_NEWER
             var lightingSettings = EnsureLightingSettings();
             if (lightingSettings == null)
                 return new ErrorResponse(
@@ -220,6 +242,84 @@ namespace MCPForUnity.Editor.Tools.Graphics
                 message = msg,
                 data = new { changed, failed }
             };
+#else
+            var changed = new List<string>();
+            var failed = new List<string>();
+
+            foreach (var prop in settingsToken.Properties())
+            {
+                string name = prop.Name;
+                JToken value = prop.Value;
+
+                try
+                {
+                    switch (name.ToLowerInvariant())
+                    {
+                        case "bakedgi":
+                        case "baked_gi":
+                            Lightmapping.bakedGI = ParamCoercion.CoerceBool(value, Lightmapping.bakedGI);
+                            changed.Add(name);
+                            break;
+                        case "realtimegi":
+                        case "realtime_gi":
+                            Lightmapping.realtimeGI = ParamCoercion.CoerceBool(value, Lightmapping.realtimeGI);
+                            changed.Add(name);
+                            break;
+                        case "lightmapresolution":
+                        case "lightmap_resolution":
+                            LightmapEditorSettings.bakeResolution = ParamCoercion.CoerceFloat(value, LightmapEditorSettings.bakeResolution);
+                            changed.Add(name);
+                            break;
+                        case "lightmapmaxsize":
+                        case "lightmap_max_size":
+                            LightmapEditorSettings.maxAtlasSize = ParamCoercion.CoerceInt(value, LightmapEditorSettings.maxAtlasSize);
+                            changed.Add(name);
+                            break;
+                        case "directsamplecount":
+                        case "direct_sample_count":
+                            LightmapEditorSettings.directSampleCount = ParamCoercion.CoerceInt(value, LightmapEditorSettings.directSampleCount);
+                            changed.Add(name);
+                            break;
+                        case "indirectsamplecount":
+                        case "indirect_sample_count":
+                            LightmapEditorSettings.indirectSampleCount = ParamCoercion.CoerceInt(value, LightmapEditorSettings.indirectSampleCount);
+                            changed.Add(name);
+                            break;
+                        case "ao":
+                            LightmapEditorSettings.enableAmbientOcclusion = ParamCoercion.CoerceBool(value, LightmapEditorSettings.enableAmbientOcclusion);
+                            changed.Add(name);
+                            break;
+                        case "aomaxdistance":
+                        case "ao_max_distance":
+                            LightmapEditorSettings.aoMaxDistance = ParamCoercion.CoerceFloat(value, LightmapEditorSettings.aoMaxDistance);
+                            changed.Add(name);
+                            break;
+                        default:
+                            failed.Add(name);
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    McpLog.Warn($"[LightBakingOps] Failed to set '{name}': {ex.Message}");
+                    failed.Add(name);
+                }
+            }
+
+            if (changed.Count == 0 && failed.Count > 0)
+                return new ErrorResponse($"Failed to set any settings. Invalid properties: {string.Join(", ", failed)}");
+
+            var msg = $"Updated {changed.Count} lighting setting(s)";
+            if (failed.Count > 0)
+                msg += $". Failed: {string.Join(", ", failed)}";
+
+            return new
+            {
+                success = true,
+                message = msg,
+                data = new { changed, failed }
+            };
+#endif
         }
 
         // === bake_create_light_probe_group ===
@@ -390,6 +490,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             };
         }
 
+#if UNITY_2020_1_OR_NEWER
         // --- Helper: Ensure a LightingSettings asset exists ---
         private static LightingSettings EnsureLightingSettings()
         {
@@ -408,6 +509,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             }
             catch { return null; }
         }
+#endif
 
         // --- Helper: Find a GameObject by name or instanceID ---
         private static GameObject FindGameObject(string target)
@@ -424,6 +526,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
             return GameObject.Find(target);
         }
 
+#if UNITY_2020_1_OR_NEWER
         // --- Helper: Read bounceCount with version fallback ---
         private static void ReadBounceCount(LightingSettings settings, Dictionary<string, object> data)
         {
@@ -559,6 +662,7 @@ namespace MCPForUnity.Editor.Tools.Graphics
 
             return false;
         }
+#endif
 
         // --- Helper: Parse enum from JToken (string name or int value) ---
         private static bool TryParseEnum<T>(JToken value, out T result) where T : struct, Enum

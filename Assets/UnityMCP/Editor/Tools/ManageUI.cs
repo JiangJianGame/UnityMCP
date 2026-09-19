@@ -16,7 +16,7 @@ namespace MCPForUnity.Editor.Tools
     [McpForUnityTool("manage_ui", AutoRegister = false, Group = "ui")]
     public static class ManageUI
     {
-        private static readonly HashSet<string> ValidExtensions = new(StringComparer.OrdinalIgnoreCase)
+        private static readonly HashSet<string> ValidExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ".uxml", ".uss"
         };
@@ -24,6 +24,7 @@ namespace MCPForUnity.Editor.Tools
         // UTF-8 without BOM — UI Builder in Unity 6 can fail to open UXML files with a BOM.
         private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
 
+#if UNITY_2021_1_OR_NEWER
         static ManageUI()
         {
             EditorApplication.quitting += CleanupRenderTextures;
@@ -44,6 +45,7 @@ namespace MCPForUnity.Editor.Tools
             }
             s_panelRTs.Clear();
         }
+#endif
 
         public static object HandleCommand(JObject @params)
         {
@@ -296,6 +298,7 @@ namespace MCPForUnity.Editor.Tools
                 new { path });
         }
 
+#if UNITY_2021_1_OR_NEWER
         private static object AttachUIDocument(JObject @params)
         {
             var p = new ToolParams(@params);
@@ -391,7 +394,14 @@ namespace MCPForUnity.Editor.Tools
                     sortOrder
                 });
         }
+#else
+        private static object AttachUIDocument(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit runtime (UIDocument) is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+#endif
 
+#if UNITY_2021_1_OR_NEWER
         private static object CreatePanelSettings(JObject @params)
         {
             var p = new ToolParams(@params);
@@ -620,6 +630,17 @@ namespace MCPForUnity.Editor.Tools
             ps.dynamicAtlasSettings = daCopy;
             changes.Add("dynamicAtlasSettings");
         }
+#else
+        private static object CreatePanelSettings(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit PanelSettings is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+
+        private static object UpdatePanelSettings(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit PanelSettings is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+#endif
 
         // ── Tiny helpers to keep the switch compact ─────────────────────────
 
@@ -704,6 +725,7 @@ namespace MCPForUnity.Editor.Tools
             }
         }
 
+#if UNITY_2021_1_OR_NEWER
         private static object GetVisualTree(JObject @params)
         {
             var p = new ToolParams(@params);
@@ -802,7 +824,14 @@ namespace MCPForUnity.Editor.Tools
 
             return result;
         }
+#else
+        private static object GetVisualTree(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit runtime (UIDocument / GetVisualTree) is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+#endif
 
+#if UNITY_2021_1_OR_NEWER
         // ---- Render UI ----
 
         // Persistent RenderTextures keyed by PanelSettings instance ID so the panel
@@ -1185,6 +1214,12 @@ namespace MCPForUnity.Editor.Tools
                 }
             }
         }
+#else
+        private static object RenderUI(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit RenderUI is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+#endif
 
         // ---- Link Stylesheet ----
 
@@ -1386,6 +1421,7 @@ namespace MCPForUnity.Editor.Tools
 
         // ---- Detach UIDocument ----
 
+#if UNITY_2021_1_OR_NEWER
         private static object DetachUIDocument(JObject @params)
         {
             var p = new ToolParams(@params);
@@ -1580,6 +1616,17 @@ namespace MCPForUnity.Editor.Tools
                 $"Modified element '{elementName}' on {go.name}: {string.Join(", ", applied)}",
                 responseData);
         }
+#else
+        private static object DetachUIDocument(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit runtime (UIDocument) is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+
+        private static object ModifyVisualElement(JObject @params)
+        {
+            return new ErrorResponse("UI Toolkit runtime (UIDocument / VisualElement) is not supported in Unity 2019.4. Please use UGUI (Canvas/RectTransform) instead.");
+        }
+#endif
 
         private static void ApplyInlineStyles(VisualElement element, JObject styleObj, List<string> modifications)
         {

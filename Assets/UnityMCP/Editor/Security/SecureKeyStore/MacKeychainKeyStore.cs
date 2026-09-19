@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Linq;
 
 namespace MCPForUnity.Editor.Security
 {
@@ -42,14 +43,14 @@ namespace MCPForUnity.Editor.Security
         {
             try
             {
-                var psi = new ProcessStartInfo(Security)
+                string arguments = string.Join(" ", args.Select(a => $"\"{a}\""));
+                var psi = new ProcessStartInfo(Security, arguments)
                 {
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
-                foreach (string a in args) psi.ArgumentList.Add(a);
                 using (var p = Process.Start(psi))
                 {
                     string outp = p.StandardOutput.ReadToEnd();

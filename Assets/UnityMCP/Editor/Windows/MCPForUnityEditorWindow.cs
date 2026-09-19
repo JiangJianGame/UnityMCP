@@ -49,7 +49,7 @@ namespace MCPForUnity.Editor.Windows
         private VisualElement resourcesPanel;
         private VisualElement assetGenPanel;
 
-        private static readonly HashSet<MCPForUnityEditorWindow> OpenWindows = new();
+        private static readonly HashSet<MCPForUnityEditorWindow> OpenWindows = new HashSet<MCPForUnityEditorWindow>();
         private bool guiCreated = false;
         private bool toolsLoaded = false;
         private bool resourcesLoaded = false;
@@ -266,7 +266,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (connectionTree != null)
             {
-                var connectionRoot = connectionTree.Instantiate();
+                var connectionRoot = connectionTree.CloneTree();
                 clientsContainer.Add(connectionRoot);
                 connectionSection = new McpConnectionSection(connectionRoot);
                 connectionSection.OnManualConfigUpdateRequested += () =>
@@ -281,7 +281,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (clientConfigTree != null)
             {
-                var clientConfigRoot = clientConfigTree.Instantiate();
+                var clientConfigRoot = clientConfigTree.CloneTree();
                 clientsContainer.Add(clientConfigRoot);
                 clientConfigSection = new McpClientConfigSection(clientConfigRoot);
 
@@ -305,7 +305,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (advancedTree != null)
             {
-                var advancedRoot = advancedTree.Instantiate();
+                var advancedRoot = advancedTree.CloneTree();
                 advancedContainer.Add(advancedRoot);
                 advancedSection = new McpAdvancedSection(advancedRoot);
 
@@ -338,7 +338,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (validationTree != null)
             {
-                var validationRoot = validationTree.Instantiate();
+                var validationRoot = validationTree.CloneTree();
                 advancedContainer.Add(validationRoot);
                 new McpValidationSection(validationRoot);
             }
@@ -349,7 +349,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (toolsTree != null)
             {
-                var toolsRoot = toolsTree.Instantiate();
+                var toolsRoot = toolsTree.CloneTree();
                 toolsContainer.Add(toolsRoot);
                 toolsSection = new McpToolsSection(toolsRoot);
 
@@ -369,7 +369,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (resourcesTree != null)
             {
-                var resourcesRoot = resourcesTree.Instantiate();
+                var resourcesRoot = resourcesTree.CloneTree();
                 resourcesContainer.Add(resourcesRoot);
                 resourcesSection = new McpResourcesSection(resourcesRoot);
 
@@ -389,7 +389,7 @@ namespace MCPForUnity.Editor.Windows
             );
             if (assetGenTree != null)
             {
-                var assetGenRoot = assetGenTree.Instantiate();
+                var assetGenRoot = assetGenTree.CloneTree();
                 assetGenContainer.Add(assetGenRoot);
                 assetGenSection = new McpAssetGenSection(assetGenRoot);
             }
@@ -1053,6 +1053,12 @@ namespace MCPForUnity.Editor.Windows
 
         private static void BatchUpmAdd(string[] packageIds, Action onComplete = null)
         {
+            BatchUpmInstall(packageIds, onComplete);
+        }
+
+#if UNITY_2021_1_OR_NEWER
+        private static void BatchUpmInstall(string[] packageIds, Action onComplete = null)
+        {
             var request = UnityEditor.PackageManager.Client.AddAndRemove(packageIds, null);
             EditorUtility.DisplayProgressBar("Installing Packages", $"Installing {packageIds.Length} package(s)...", 0.5f);
             PollUpmRequest(request, "install", onComplete);
@@ -1081,6 +1087,77 @@ namespace MCPForUnity.Editor.Windows
             };
             EditorApplication.update += pollCallback;
         }
+#else
+        private static void BatchUpmInstall(string[] packageIds, Action onComplete = null)
+        {
+            if (packageIds == null || packageIds.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+            InstallNextPackage(new Queue<string>(packageIds), onComplete);
+        }
+
+        private static void InstallNextPackage(Queue<string> queue, Action onComplete)
+        {
+            if (queue.Count == 0)
+            {
+                EditorUtility.ClearProgressBar();
+                onComplete?.Invoke();
+                return;
+            }
+            string pkg = queue.Dequeue();
+            EditorUtility.DisplayProgressBar("Installing Packages", $"Installing {pkg}...", 0.5f);
+            var req = UnityEditor.PackageManager.Client.Add(pkg);
+            EditorApplication.CallbackFunction poll = null;
+            poll = () =>
+            {
+                if (!req.IsCompleted) return;
+                EditorApplication.update -= poll;
+                if (req.Status == UnityEditor.PackageManager.StatusCode.Success)
+                    Debug.Log($"[MCP] Package {pkg} install succeeded.");
+                else
+                    Debug.LogError($"[MCP] Package {pkg} install failed: {req.Error?.message}");
+                InstallNextPackage(queue, onComplete);
+            };
+            EditorApplication.update += poll;
+        }
+
+        private static void BatchUpmRemove(string[] packageIds, Action onComplete = null)
+        {
+            if (packageIds == null || packageIds.Length == 0)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+            RemoveNextPackage(new Queue<string>(packageIds), onComplete);
+        }
+
+        private static void RemoveNextPackage(Queue<string> queue, Action onComplete)
+        {
+            if (queue.Count == 0)
+            {
+                EditorUtility.ClearProgressBar();
+                onComplete?.Invoke();
+                return;
+            }
+            string pkg = queue.Dequeue();
+            EditorUtility.DisplayProgressBar("Removing Packages", $"Removing {pkg}...", 0.5f);
+            var req = UnityEditor.PackageManager.Client.Remove(pkg);
+            EditorApplication.CallbackFunction poll = null;
+            poll = () =>
+            {
+                if (!req.IsCompleted) return;
+                EditorApplication.update -= poll;
+                if (req.Status == UnityEditor.PackageManager.StatusCode.Success)
+                    Debug.Log($"[MCP] Package {pkg} remove succeeded.");
+                else
+                    Debug.LogError($"[MCP] Package {pkg} remove failed: {req.Error?.message}");
+                RemoveNextPackage(queue, onComplete);
+            };
+            EditorApplication.update += poll;
+        }
+#endif
 
         private static void UninstallRoslyn()
         {

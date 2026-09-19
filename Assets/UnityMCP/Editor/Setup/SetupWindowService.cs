@@ -80,7 +80,8 @@ namespace MCPForUnity.Editor.Setup
         {
             try
             {
-                dependencyResult ??= DependencyManager.CheckAllDependencies();
+                if (dependencyResult == null)
+                    dependencyResult = DependencyManager.CheckAllDependencies();
                 MCPSetupWindow.ShowWindow(dependencyResult);
             }
             catch (Exception ex)
