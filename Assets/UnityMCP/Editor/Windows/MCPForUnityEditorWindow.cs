@@ -264,9 +264,17 @@ namespace MCPForUnity.Editor.Windows
             var connectionTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
                 $"{basePath}/Editor/Windows/Components/Connection/McpConnectionSection.uxml"
             );
+            var commonStyle = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+    $"{basePath}/Editor/Windows/Components/Common.uss"
+);
             if (connectionTree != null)
             {
                 var connectionRoot = connectionTree.CloneTree();
+                // =========== 新增：加载Common.uss ===========
+                if (commonStyle != null)
+                {
+                    connectionRoot.styleSheets.Add(commonStyle);
+                }
                 clientsContainer.Add(connectionRoot);
                 connectionSection = new McpConnectionSection(connectionRoot);
                 connectionSection.OnManualConfigUpdateRequested += () =>
@@ -282,6 +290,13 @@ namespace MCPForUnity.Editor.Windows
             if (clientConfigTree != null)
             {
                 var clientConfigRoot = clientConfigTree.CloneTree();
+
+                // =========== 新增：加载Common.uss ===========
+                if (commonStyle != null)
+                {
+                    clientConfigRoot.styleSheets.Add(commonStyle);
+                }
+
                 clientsContainer.Add(clientConfigRoot);
                 clientConfigSection = new McpClientConfigSection(clientConfigRoot);
 
@@ -306,6 +321,13 @@ namespace MCPForUnity.Editor.Windows
             if (advancedTree != null)
             {
                 var advancedRoot = advancedTree.CloneTree();
+
+                // =========== 新增：加载Common.uss ===========
+                if (commonStyle != null)
+                {
+                    advancedRoot.styleSheets.Add(commonStyle);
+                }
+
                 advancedContainer.Add(advancedRoot);
                 advancedSection = new McpAdvancedSection(advancedRoot);
 
@@ -339,6 +361,13 @@ namespace MCPForUnity.Editor.Windows
             if (validationTree != null)
             {
                 var validationRoot = validationTree.CloneTree();
+
+                // =========== 新增：加载Common.uss ===========
+                if (commonStyle != null)
+                {
+                    validationRoot.styleSheets.Add(commonStyle);
+                }
+
                 advancedContainer.Add(validationRoot);
                 new McpValidationSection(validationRoot);
             }

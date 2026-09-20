@@ -72,6 +72,23 @@ namespace MCPForUnity.Editor.Windows
 
             visualTree.CloneTree(rootVisualElement);
 
+            // Load Stylesheets
+            var commonStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                $"{basePath}/Editor/Windows/Components/Common.uss"
+            );
+            if (commonStyleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(commonStyleSheet);
+            }
+
+            var setupStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                $"{basePath}/Editor/Windows/MCPSetupWindow.uss"
+            );
+            if (setupStyleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(setupStyleSheet);
+            }
+
             // Embed the Ocean brand mark beside the title
             var setupHeader = rootVisualElement.Q<VisualElement>("setup-header");
             if (setupHeader != null && setupHeader.Q<OceanMark>() == null)

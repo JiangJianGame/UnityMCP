@@ -1,5 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
-    <Style src="../Common.uss" />
     <ui:VisualElement name="assetgen-section" class="section">
         <ui:Label text="AI Asset Generation" class="section-title" />
         <ui:VisualElement class="section-content">

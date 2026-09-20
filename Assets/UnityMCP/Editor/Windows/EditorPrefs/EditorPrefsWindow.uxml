@@ -1,7 +1,4 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
-    <Style src="../Components/Common.uss" />
-    <Style src="EditorPrefsWindow.uss" />
-    
     <ui:ScrollView name="scroll-view" mode="Vertical">
         <!-- Header -->
         <ui:VisualElement class="header">

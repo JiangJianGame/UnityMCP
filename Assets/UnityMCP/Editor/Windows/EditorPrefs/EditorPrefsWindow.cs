@@ -122,6 +122,23 @@ namespace MCPForUnity.Editor.Windows
 
             visualTree.CloneTree(rootVisualElement);
 
+            // Load Stylesheets
+            var commonStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                $"{basePath}/Editor/Windows/Components/Common.uss"
+            );
+            if (commonStyleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(commonStyleSheet);
+            }
+
+            var prefsStyleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
+                $"{basePath}/Editor/Windows/EditorPrefs/EditorPrefsWindow.uss"
+            );
+            if (prefsStyleSheet != null)
+            {
+                rootVisualElement.styleSheets.Add(prefsStyleSheet);
+            }
+
             // Add search bar container at the top
             var searchContainer = new VisualElement();
             searchContainer.style.flexDirection = FlexDirection.Row;
