@@ -261,141 +261,197 @@ namespace MCPForUnity.Editor.Windows
 			SetupTabs();
 
 			// Load and initialize Connection section
-			var connectionTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/Connection/McpConnectionSection.uxml"
-			);
-			if (connectionTree != null)
+			try
 			{
-				var connectionRoot = connectionTree.CloneTree();
-				clientsContainer.Add(connectionRoot);
-				connectionSection = new McpConnectionSection(connectionRoot);
-				connectionSection.OnManualConfigUpdateRequested += () =>
-					clientConfigSection?.UpdateManualConfiguration();
-				connectionSection.OnTransportChanged += () =>
-					clientConfigSection?.RefreshSelectedClient(forceImmediate: true);
+				var connectionTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/Connection/McpConnectionSection.uxml"
+				);
+				if (connectionTree != null)
+				{
+					var connectionRoot = connectionTree.CloneTree();
+					clientsContainer.Add(connectionRoot);
+					connectionSection = new McpConnectionSection(connectionRoot);
+					connectionSection.OnManualConfigUpdateRequested += () =>
+						clientConfigSection?.UpdateManualConfiguration();
+					connectionSection.OnTransportChanged += () =>
+						clientConfigSection?.RefreshSelectedClient(forceImmediate: true);
+				}
+			}
+			catch (Exception ex)
+			{
+				McpLog.Error($"[MCPWindow] ConnectionSection init error: {ex}");
 			}
 
 			// Load and initialize Client Configuration section
-			var clientConfigTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/ClientConfig/McpClientConfigSection.uxml"
-			);
-			if (clientConfigTree != null)
+			try
 			{
-				var clientConfigRoot = clientConfigTree.CloneTree();
-				clientsContainer.Add(clientConfigRoot);
-				clientConfigSection = new McpClientConfigSection(clientConfigRoot);
+				var clientConfigTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/ClientConfig/McpClientConfigSection.uxml"
+				);
+				if (clientConfigTree != null)
+				{
+					var clientConfigRoot = clientConfigTree.CloneTree();
+					clientsContainer.Add(clientConfigRoot);
+					clientConfigSection = new McpClientConfigSection(clientConfigRoot);
 
-				// Wire up transport mismatch detection: when client status is checked,
-				// update the connection section's warning banner if there's a mismatch
-				clientConfigSection.OnClientTransportDetected += (clientName, transport) =>
-					connectionSection?.UpdateTransportMismatchWarning(clientName, transport);
+					// Wire up transport mismatch detection: when client status is checked,
+					// update the connection section's warning banner if there's a mismatch
+					clientConfigSection.OnClientTransportDetected += (clientName, transport) =>
+						connectionSection?.UpdateTransportMismatchWarning(clientName, transport);
 
-				// Wire up version mismatch detection: when client status is checked,
-				// update the connection section's warning banner if there's a version mismatch
-				clientConfigSection.OnClientConfigMismatch += (clientName, mismatchMessage) =>
-					connectionSection?.UpdateVersionMismatchWarning(clientName, mismatchMessage);
+					// Wire up version mismatch detection: when client status is checked,
+					// update the connection section's warning banner if there's a version mismatch
+					clientConfigSection.OnClientConfigMismatch += (clientName, mismatchMessage) =>
+						connectionSection?.UpdateVersionMismatchWarning(clientName, mismatchMessage);
+				}
+			}
+			catch (Exception ex)
+			{
+				McpLog.Error($"[MCPWindow] ClientConfigSection init error: {ex}");
 			}
 
 			// Build Dependencies section (replaces old Roslyn + Validation in Deps tab)
-			BuildDependenciesSection(depsContainer);
+			try
+			{
+				BuildDependenciesSection(depsContainer);
+			}
+			catch (Exception ex)
+			{
+				McpLog.Error($"[MCPWindow] DependenciesSection init error: {ex}");
+			}
 
 			// Load and initialize Advanced section
-			var advancedTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/Advanced/McpAdvancedSection.uxml"
-			);
-			if (advancedTree != null)
+			try
 			{
-				var advancedRoot = advancedTree.CloneTree();
-				advancedContainer.Add(advancedRoot);
-				advancedSection = new McpAdvancedSection(advancedRoot);
+				var advancedTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/Advanced/McpAdvancedSection.uxml"
+				);
+				if (advancedTree != null)
+				{
+					var advancedRoot = advancedTree.CloneTree();
+					advancedContainer.Add(advancedRoot);
+					advancedSection = new McpAdvancedSection(advancedRoot);
 
-				// Wire up events from Advanced section
-				advancedSection.OnGitUrlChanged += () =>
-					clientConfigSection?.UpdateManualConfiguration();
-				advancedSection.OnHttpServerCommandUpdateRequested += () =>
-				{
-					connectionSection?.UpdateHttpServerCommandDisplay();
-					connectionSection?.UpdateConnectionStatus();
-				};
-				advancedSection.OnTestConnectionRequested += async () =>
-				{
-					if (connectionSection != null)
-						await connectionSection.VerifyBridgeConnectionAsync();
-				};
-				advancedSection.OnPackageDeployed += () =>
-				{
-					UpdateVersionLabel();
-					QueueUpdateCheck();
-				};
-				// Wire up health status updates from Connection to Advanced
-				connectionSection?.SetHealthStatusUpdateCallback((isHealthy, statusText) =>
-					advancedSection?.UpdateHealthStatus(isHealthy, statusText));
+					// Wire up events from Advanced section
+					advancedSection.OnGitUrlChanged += () =>
+						clientConfigSection?.UpdateManualConfiguration();
+					advancedSection.OnHttpServerCommandUpdateRequested += () =>
+					{
+						connectionSection?.UpdateHttpServerCommandDisplay();
+						connectionSection?.UpdateConnectionStatus();
+					};
+					advancedSection.OnTestConnectionRequested += async () =>
+					{
+						if (connectionSection != null)
+							await connectionSection.VerifyBridgeConnectionAsync();
+					};
+					advancedSection.OnPackageDeployed += () =>
+					{
+						UpdateVersionLabel();
+						QueueUpdateCheck();
+					};
+					// Wire up health status updates from Connection to Advanced
+					connectionSection?.SetHealthStatusUpdateCallback((isHealthy, statusText) =>
+						advancedSection?.UpdateHealthStatus(isHealthy, statusText));
+				}
+			}
+			catch (Exception ex)
+			{
+				McpLog.Error($"[MCPWindow] AdvancedSection init error: {ex}");
 			}
 
 			// Load Validation section into Advanced tab
-			var validationTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/Validation/McpValidationSection.uxml"
-			);
-			if (validationTree != null)
+			try
 			{
-				var validationRoot = validationTree.CloneTree();
-				advancedContainer.Add(validationRoot);
-				new McpValidationSection(validationRoot);
+				var validationTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/Validation/McpValidationSection.uxml"
+				);
+				if (validationTree != null)
+				{
+					var validationRoot = validationTree.CloneTree();
+					advancedContainer.Add(validationRoot);
+					new McpValidationSection(validationRoot);
+				}
+			}
+			catch (Exception ex)
+			{
+				McpLog.Error($"[MCPWindow] ValidationSection init error: {ex}");
 			}
 
 			// Load and initialize Tools section
-			var toolsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/Tools/McpToolsSection.uxml"
-			);
-			if (toolsTree != null)
+			try
 			{
-				var toolsRoot = toolsTree.CloneTree();
-				toolsContainer.Add(toolsRoot);
-				toolsSection = new McpToolsSection(toolsRoot);
-
-				if (toolsTabToggle != null && toolsTabToggle.value)
+				var toolsTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/Tools/McpToolsSection.uxml"
+				);
+				if (toolsTree != null)
 				{
-					EnsureToolsLoaded();
+					var toolsRoot = toolsTree.CloneTree();
+					toolsContainer.Add(toolsRoot);
+					toolsSection = new McpToolsSection(toolsRoot);
+
+					if (toolsTabToggle != null && toolsTabToggle.value)
+					{
+						EnsureToolsLoaded();
+					}
+				}
+				else
+				{
+					McpLog.Warn("Failed to load tools section UXML. Tool configuration will be unavailable.");
 				}
 			}
-			else
+			catch (Exception ex)
 			{
-				McpLog.Warn("Failed to load tools section UXML. Tool configuration will be unavailable.");
+				McpLog.Error($"[MCPWindow] ToolsSection init error: {ex}");
 			}
 
 			// Load and initialize Resources section
-			var resourcesTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/Resources/McpResourcesSection.uxml"
-			);
-			if (resourcesTree != null)
+			try
 			{
-				var resourcesRoot = resourcesTree.CloneTree();
-				resourcesContainer.Add(resourcesRoot);
-				resourcesSection = new McpResourcesSection(resourcesRoot);
-
-				if (resourcesTabToggle != null && resourcesTabToggle.value)
+				var resourcesTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/Resources/McpResourcesSection.uxml"
+				);
+				if (resourcesTree != null)
 				{
-					EnsureResourcesLoaded();
+					var resourcesRoot = resourcesTree.CloneTree();
+					resourcesContainer.Add(resourcesRoot);
+					resourcesSection = new McpResourcesSection(resourcesRoot);
+
+					if (resourcesTabToggle != null && resourcesTabToggle.value)
+					{
+						EnsureResourcesLoaded();
+					}
+				}
+				else
+				{
+					McpLog.Warn("Failed to load resources section UXML. Resource configuration will be unavailable.");
 				}
 			}
-			else
+			catch (Exception ex)
 			{
-				McpLog.Warn("Failed to load resources section UXML. Resource configuration will be unavailable.");
+				McpLog.Error($"[MCPWindow] ResourcesSection init error: {ex}");
 			}
 
 			// Load and initialize Asset Generation section
-			var assetGenTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-				$"{basePath}/Editor/Windows/Components/AssetGen/McpAssetGenSection.uxml"
-			);
-			if (assetGenTree != null)
+			try
 			{
-				var assetGenRoot = assetGenTree.CloneTree();
-				assetGenContainer.Add(assetGenRoot);
-				assetGenSection = new McpAssetGenSection(assetGenRoot);
+				var assetGenTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
+					$"{basePath}/Editor/Windows/Components/AssetGen/McpAssetGenSection.uxml"
+				);
+				if (assetGenTree != null)
+				{
+					var assetGenRoot = assetGenTree.CloneTree();
+					assetGenContainer.Add(assetGenRoot);
+					assetGenSection = new McpAssetGenSection(assetGenRoot);
+				}
+				else
+				{
+					McpLog.Warn("Failed to load asset generation section UXML. Asset generation configuration will be unavailable.");
+				}
 			}
-			else
+			catch (Exception ex)
 			{
-				McpLog.Warn("Failed to load asset generation section UXML. Asset generation configuration will be unavailable.");
+				McpLog.Error($"[MCPWindow] AssetGenSection init error: {ex}");
 			}
 
 			// Apply .section-last class to last section in each stack
