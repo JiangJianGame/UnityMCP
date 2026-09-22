@@ -62,6 +62,48 @@ Unity 官方与社区最新的 MCP (Model Context Protocol) 插件通常依赖 *
 
 ---
 
+## 📦 如何在其他项目中导入此包
+
+本项目支持通过 **Unity Package Manager (UPM)** 直接通过 Git URL 导入，或者作为本地嵌入式包引入。
+
+### 方式一：Unity Package Manager (UPM) 界面导入（推荐）
+
+> [!IMPORTANT]
+> **切勿直接输入裸仓库链接！** 由于本仓库包含完整的示例工程，`package.json` 位于 `/Assets/UnityMCP` 子目录中。如果直接输入裸 URL，Unity 会报错：`No package manifest was found`。必须在链接末尾附带 `?path=/Assets/UnityMCP` 参数。
+
+1. 打开目标 Unity 项目，点击顶部菜单栏：**Window** $\to$ **Package Manager**。
+2. 点击左上角的 **`+`** 加号，选择 **"Add package from git URL..."**。
+3. 输入以下完整地址并点击 **Add**：
+   ```text
+   https://github.com/JiangJianGame/UnityMCP.git?path=/Assets/UnityMCP
+   ```
+   *(如果需要锁定特定分支，可加上 `#main`：`https://github.com/JiangJianGame/UnityMCP.git?path=/Assets/UnityMCP#main`)*
+
+---
+
+### 方式二：直接修改 `Packages/manifest.json`
+
+在目标项目的 `Packages/manifest.json` 文件中，向 `"dependencies"` 字典中添加以下键值对：
+
+```json
+{
+  "dependencies": {
+    "com.coplaydev.unity-mcp": "https://github.com/JiangJianGame/UnityMCP.git?path=/Assets/UnityMCP",
+    ...
+  }
+}
+```
+保存文件后切回 Unity，编辑器将自动拉取并导入。
+
+---
+
+### 方式三：本地离线导入（Local Package / Assets）
+
+- **本地 Package 引入**：Clone 或下载本仓库到本地，在 Package Manager 中点击 **`+`** $\to$ **"Add package from disk..."**，选择仓库内的 `Assets/UnityMCP/package.json` 文件。
+- **直接放入 Assets**：直接将本仓库的 `Assets/UnityMCP` 文件夹完整拷贝到目标项目的 `Assets/` 目录下即可。
+
+---
+
 ## 🚀 快速上手
 
 ### 1. 环境准备
